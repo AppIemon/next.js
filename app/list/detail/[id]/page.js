@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Navbar from '../../../navbar';
 import Comment from './Comment';
-import FileSection from './FileSection';  // FileSection 컴포넌트 import
 import { getUserFromLocalStorage, isValidUserData } from '@/app/util/auth';
 
 const API_BASE = '/api/posts';  // API 기본 경로 상수 추가
@@ -240,12 +239,6 @@ export default function Detail() {
                         <button onClick={handleDelete}>삭제</button>
                     </div>
                 )}
-                <FileSection 
-                    postId={id} 
-                    isEditMode={false}
-                    currentUser={getUserFromLocalStorage()}
-                    postAuthor={post?.author}
-                />
                 <Comment postId={id} postAuthor={post.author} />
             </div>
         </div>
