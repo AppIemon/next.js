@@ -8,6 +8,10 @@ import { NextResponse } from 'next/server';
 // 파일 목록 조회 (GET)
 export async function GET(request, { params }) {
     try {
+        if (!params || !params.id) {
+            return NextResponse.json({ error: "유효하지 않은 요청입니다." }, { status: 400 });
+        }
+
         const db = (await connectDB()).db('forum');
         const files = await db.collection('files')
             .find({ postId: params.id })
@@ -81,6 +85,10 @@ export async function POST(request, { params }) {
 // 파일 삭제 (DELETE)
 export async function DELETE(request, { params }) {
     try {
+        if (!params || !params.id) {
+            return NextResponse.json({ error: "유효하지 않은 요청입니다." }, { status: 400 });
+        }
+
         const db = (await connectDB()).db('forum');
         
         // ID가 ObjectId 형식인 경우 파일 ID로 처리, 아닌 경우 postId로 처리
