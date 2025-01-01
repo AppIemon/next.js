@@ -37,28 +37,52 @@ export async function GET(request, { params }) {
 // 파일 업로드 (POST)
 export async function POST(request, { params }) {
     try {
-        const formData = await request.formData();
-        const file = formData.get('file');
-
-        if (!file) {
-            return NextResponse.json({ error: "파일이 없습니다." }, { status: 400 });
+        if (!request.body) {
+            return NextResponse.json({ error: "요청 본문이 비어있습니다." }, { status: 400 });
         }
 
-        const bytes = await file.arrayBuffer();
+        const formData = await request.formData().catch(() => null);
+        if (!formData) {
+            return NextResponse.json({ error: "FormData를 파싱할 수 없습니다." }, { status: 400 });
+        }
+
+        const file = formData.get('file');
+        if (!file || !(file instanceof File)) {
+            return NextResponse.json({ error: "유효한 파일이 아닙니다." }, { status: 400 });
+        }
+
+        // 파일 크기 제한 (예: 3MB)
+        const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
+        if (file.size > MAX_FILE_SIZE) {
+            return NextResponse.json({ error: "파일 크기는 3MB를 초과할 수 없습니다." }, { status: 400 });
+        }
+
+        const bytes = await file.arrayBuffer().catch(() => null);
+        if (!bytes) {
+            return NextResponse.json({ error: "파일 데이터를 읽을 수 없습니다." }, { status: 400 });
+        }
+
         const buffer = Buffer.from(bytes);
 
         // 업로드 디렉토리 생성
         const uploadDir = join(process.cwd(), 'public', 'uploads');
         if (!existsSync(uploadDir)) {
-            await mkdir(uploadDir, { recursive: true });
+            await mkdir(uploadDir, { recursive: true }).catch(error => {
+                console.error('Directory creation error:', error);
+                throw new Error("업로드 디렉토리를 생성할 수 없습니다.");
+            });
         }
 
         // 안전한 파일명 생성
-        const safeFileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+        const fileExtension = file.name.split('.').pop() || '';
+        const safeFileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExtension}`;
         const filepath = join(uploadDir, safeFileName);
 
         // 파일 저장
-        await writeFile(filepath, buffer);
+        await writeFile(filepath, buffer).catch(error => {
+            console.error('File write error:', error);
+            throw new Error("파일을 저장할 수 없습니다.");
+        });
 
         // MongoDB에 파일 정보 저장
         const db = (await connectDB()).db('forum');
@@ -78,7 +102,9 @@ export async function POST(request, { params }) {
         });
     } catch (error) {
         console.error('File upload error:', error);
-        return NextResponse.json({ error: "파일 업로드 중 오류가 발생했습니다." }, { status: 500 });
+        return NextResponse.json({ 
+            error: error.message || "파일 업로드 중 오류가 발생했습니다." 
+        }, { status: 500 });
     }
 }
 

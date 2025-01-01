@@ -11,6 +11,8 @@ export default function Edit() {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [postAuthor, setPostAuthor] = useState('');  // 게시글 작성자 상태 추가
+    const [existingData, setExistingData] = useState(null);  // 추가된 state
+    const [files, setFiles] = useState([]);  // files 상태 추가
     const router = useRouter();
     const { id } = useParams();
 
@@ -24,7 +26,7 @@ export default function Edit() {
         const fetchPost = async () => {
             try {
                 if (!id) return;
-                const response = await fetch(`/api/post/${id}`); // API 경로 수정
+                const response = await fetch(`/api/posts/${id}`);  // 경로 수정
                 if (!response.ok) {
                     throw new Error('게시물을 가져오는데 실패했습니다');
                 }
@@ -35,6 +37,7 @@ export default function Edit() {
                 setTitle(data.title);
                 setContent(data.content);
                 setPostAuthor(data.author);  // 작성자 정보 저장
+                setExistingData(data);  // 전체 데이터 저장
             } catch (error) {
                 alert(error.message);
                 router.push('/list');
@@ -43,40 +46,44 @@ export default function Edit() {
         fetchPost();
     }, [id, router]);
 
+    const handleFilesChange = (newFiles) => {
+        setFiles(newFiles);  // FileSection에서 파일 변경사항 업데이트
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const userData = getUserFromLocalStorage();
-        if (!userData) {
-            alert('로그인이 필요합니다');
-            router.push('/login');
+        
+        if (!title.trim() || !content.trim()) {
+            alert('제목과 내용을 입력해주세요');
             return;
         }
 
-        if (userData.nickname !== postAuthor) {
-            alert('작성자만 수정할 수 있습니다');
-            return;
+        try {
+            const response = await fetch('/api/post/edit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: id,
+                    title: title.trim(),
+                    content: content.trim(),
+                    author: postAuthor,
+                    files: files  // 현재 files 상태 사용
+                })
+            });
+
+            const result = await response.json();
+            
+            if (!response.ok) {  // 응답 상태 체크 로직 개선
+                throw new Error(result.message || '수정에 실패했습니다');
+            }
+
+            alert('수정이 완료되었습니다');
+            router.push(`/list/detail/${id}`);
+            router.refresh();
+            
+        } catch (error) {
+            alert(error.message);
         }
-
-        const response = await fetch(`/api/post/edit`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                id: id,
-                title: title.trim(),
-                content: content.trim(),
-                author: userData.nickname
-            })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || '게시글 수정에 실패했습니다');
-        }
-
-        alert('글이 성공적으로 수정되었습니다!');
-        router.push(`/list/detail/${id}`);
     };
 
     return (
@@ -103,6 +110,7 @@ export default function Edit() {
                     isEditMode={true}
                     currentUser={getUserFromLocalStorage()}
                     postAuthor={postAuthor}
+                    onFilesChange={handleFilesChange}  // 콜백 추가
                 />
                 <button type="submit" className="write-submit-button">
                     <p className="write-submit-text">제출</p>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
-export default function FileSection({ postId, isEditMode = false, currentUser, postAuthor }) {
+export default function FileSection({ postId, isEditMode = false, currentUser, postAuthor, onFilesChange }) {
     const [files, setFiles] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -18,6 +18,9 @@ export default function FileSection({ postId, isEditMode = false, currentUser, p
             if (res.ok) {
                 const data = await res.json();
                 setFiles(data);
+                if (isEditMode && onFilesChange) {
+                    onFilesChange(data);
+                }
             }
         } catch (error) {
             console.error('파일 목록 로딩 실패:', error);
