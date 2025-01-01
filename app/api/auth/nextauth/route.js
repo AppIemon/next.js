@@ -1,7 +1,5 @@
 import NextAuth from "next-auth";
 import GithubProvider from "next-auth/providers/github";
-import { MongoDBAdapter } from "@next-auth/mongodb-adapter";
-import { connectDB } from "../../../util/database";
 
 export const authOptions = {
     providers: [
@@ -10,8 +8,7 @@ export const authOptions = {
             clientSecret: process.env.GITHUB_SECRET,
         })
     ],
-    secret: process.env.NEXTAUTH_SECRET,
-    adapter: MongoDBAdapter(connectDB)
+    secret: process.env.NEXTAUTH_SECRET
 };
 
 const handler = NextAuth(authOptions);
