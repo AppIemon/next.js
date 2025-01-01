@@ -3,6 +3,7 @@
 import { useAuth } from '../../hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import Navbar from '../navbar';
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -42,6 +43,7 @@ export default function LoginPage() {
 
     return (
         <div className="auth-form-container">
+            <Navbar />
             <form onSubmit={handleSubmit} className="auth-form">
                 <h2>로그인</h2>
                 {error && <div className="error-message">{error}</div>}
