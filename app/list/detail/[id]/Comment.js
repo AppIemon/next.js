@@ -363,9 +363,23 @@ export default function Comment({ postId, postAuthor }) {
         });
     };
 
+    // 전체 댓글 수를 계산하는 함수 추가
+    const getTotalCommentCount = (comments) => {
+        let total = 0;
+        comments.forEach(comment => {
+            total += 1; // 현재 댓글 카운트
+            if (comment.replies && Array.isArray(comment.replies)) {
+                total += getTotalCommentCount(comment.replies); // 답글 수를 재귀적으로 더함
+            }
+        });
+        return total;
+    };
+
     return (
         <div className="comment-section">
-            <h3 className="comment-title">댓글 ({comments?.length || 0})</h3>
+            <h3 className="comment-title">
+                댓글 ({Array.isArray(comments) ? getTotalCommentCount(comments) : 0})
+            </h3>
             <form onSubmit={(e) => handleSubmit(e)} className="comment-form">
                 <textarea
                     value={newComment}
@@ -379,7 +393,7 @@ export default function Comment({ postId, postAuthor }) {
                 {Array.isArray(comments) && comments.length > 0 ? (
                     renderComments(comments)
                 ) : (
-                    <p>댓글이 없습니다. (총 {comments?.length || 0}개)</p>
+                    <p>댓글이 없습니다. (총 {getTotalCommentCount(comments)}개)</p>
                 )}
             </div>
             {showProfileModal && selectedUser && (

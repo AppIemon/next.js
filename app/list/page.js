@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import ListItem from '../list/ListItem';
+import ListItem from './ListItem';
 import Navbar from '../navbar';
 
 export default function List() {

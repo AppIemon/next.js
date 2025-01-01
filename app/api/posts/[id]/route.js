@@ -47,7 +47,7 @@ export async function PUT(request, { params }) {
         }
 
         // 게시글 업데이트
-        await db.collection('posts').updateOne(
+        const result = await db.collection('posts').updateOne(
             { _id: new ObjectId(params.id) },
             { 
                 $set: {
@@ -57,6 +57,15 @@ export async function PUT(request, { params }) {
                 }
             }
         );
+
+        // 파일 정보는 그대로 유지됨 (files 컬렉션은 변경하지 않음)
+        
+        if (result.matchedCount === 0) {
+            return NextResponse.json({ 
+                success: false,
+                message: '게시글을 찾을 수 없습니다' 
+            }, { status: 404 });
+        }
 
         return NextResponse.json({ 
             success: true,
@@ -115,6 +124,9 @@ export async function DELETE(request, { params }) {
                 message: '삭제 권한이 없습니다' 
             }, { status: 403 });
         }
+
+        // 게시글 삭제 전에 관련 파일 정보 삭제
+        await db.collection('files').deleteMany({ postId: params.id });
 
         await db.collection('posts').deleteOne({ _id: new ObjectId(params.id) });
         await db.collection('comments').deleteMany({ postId: params.id });

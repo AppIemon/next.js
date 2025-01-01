@@ -1,7 +1,7 @@
 import { connectDB } from '../../../../util/database.js';
 import { ObjectId } from 'mongodb';
 import { NextResponse } from 'next/server';
-import { validateSession } from '../../../auth/session/middleware';
+import { validateSession } from '../../../auth/session/middleware.js';
 
 export async function POST(request, { params }) {
     try {

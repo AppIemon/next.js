@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Navbar from '../../../navbar';
 import Comment from './Comment';
+import FileSection from './FileSection';  // FileSection 컴포넌트 import
+import { getUserFromLocalStorage, isValidUserData } from '@/app/util/auth';
 
 const API_BASE = '/api/posts';  // API 기본 경로 상수 추가
 
@@ -67,6 +69,14 @@ export default function Detail() {
             }
         };
 
+        const loadUserData = () => {
+            const userData = getUserFromLocalStorage();
+            if (isValidUserData(userData)) {
+                setUser(userData);
+            }
+        };
+
+        loadUserData();
         checkAuth(); // 인증 확인 함수를 호출합니다.
         if (!id) return; // ID가 없으면 함수를 종료합니다.
 
@@ -74,12 +84,8 @@ export default function Detail() {
             setIsLoading(true); // 로딩 상태를 true로 설정합니다.
             setError(null); // 에러 상태를 초기화합니다.
             try {
-                await Promise.all([
-                    fetchPost(), // 게시글 데이터를 가져오는 함수입니다.
-                    updateViews() // 조회수를 업데이트하는 함수입니다.
-                ]);
-                const userInfo = localStorage.getItem('user'); // 로컬 스토리지에서 사용자 정보를 가져옵니다.
-                if (userInfo) setUser(JSON.parse(userInfo)); // 사용자 정보를 설정합니다.
+                await fetchPost(); // 게시글 데이터를 먼저 가져온 후 조회수 업데이트
+                await updateViews(); // 조회수를 업데이트하는 함수입니다.
             } catch (error) {
                 logError('LoadData', error);
                 setError('게시글을 불러오는데 실패했습니다.'); // 에러 메시지를 설정합니다.
@@ -93,12 +99,11 @@ export default function Detail() {
 
     const fetchPost = async () => {
         try {
-            const res = await fetch(`/api/posts/${id}`);
-            // if (!res.ok) {
-            //     const errorData = await res.json();
-            //     throw new Error(errorData.message || '게시글을 불러오는데 실패했습니다.');
-            // }
+            const res = await fetch(`/api/posts/${id}`);  // 이미 올바른 경로를 사용중
             const data = await res.json();
+            if (!data) {
+                throw new Error('게시글 데이터가 없습니다.');
+            }
             setPost(data);
             setLikedBy(data.likedBy || []);
         } catch (error) {
@@ -109,20 +114,27 @@ export default function Detail() {
 
     const updateViews = async () => {
         try {
-            const res = await fetch(`${API_BASE}/${id}/view`, {
+            // 이미 조회한 게시물인지 확인
+            const viewedPosts = JSON.parse(sessionStorage.getItem('viewedPosts') || '[]');
+            if (viewedPosts.includes(id)) {
+                return;
+            }
+
+            const res = await fetch('/api/post/view', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ postId: id })
             });
 
             if (res.ok) {
+                // 조회한 게시물 목록에 추가
+                viewedPosts.push(id);
+                sessionStorage.setItem('viewedPosts', JSON.stringify(viewedPosts));
+                
                 setPost(prevPost => ({
                     ...prevPost,
-                    views: prevPost.views + 1
+                    views: (prevPost?.views || 0) + 1
                 }));
-            } else {
-                const errorData = await res.json();
-                logError('Views', new Error(errorData.message || '조회수 업데이트 실패'));
             }
         } catch (error) {
             logError('Views', error);
@@ -168,13 +180,6 @@ export default function Detail() {
         if (!window.confirm('정말 삭제하시겠습니까?')) return;
 
         try {
-            const authToken = localStorage.getItem('authToken');
-            if (!authToken) {
-                alert('로그인이 필요합니다');
-                router.push('/login');
-                return;
-            }
-
             const res = await fetch(`${API_BASE}/${id}`, {  // URL 경로 수정
                 method: 'DELETE',
                 headers: {
@@ -235,6 +240,12 @@ export default function Detail() {
                         <button onClick={handleDelete}>삭제</button>
                     </div>
                 )}
+                <FileSection 
+                    postId={id} 
+                    isEditMode={false}
+                    currentUser={getUserFromLocalStorage()}
+                    postAuthor={post?.author}
+                />
                 <Comment postId={id} postAuthor={post.author} />
             </div>
         </div>

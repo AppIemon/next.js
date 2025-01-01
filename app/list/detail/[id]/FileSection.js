@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 
-export default function FileSection({ postId }) {
+export default function FileSection({ postId, isEditMode = false, currentUser, postAuthor }) {
     const [files, setFiles] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -41,9 +41,8 @@ export default function FileSection({ postId }) {
             for (let file of selectedFiles) {
                 const formData = new FormData();
                 formData.append('file', file);
-                formData.append('postId', postId);
 
-                const res = await fetch('/api/files/upload', {
+                const res = await fetch(`/api/files/${postId}`, {
                     method: 'POST',
                     body: formData
                 });
@@ -63,13 +62,42 @@ export default function FileSection({ postId }) {
     };
 
     const handleFileDownload = (filepath, filename) => {
-        const link = document.createElement('a');
-        link.href = filepath;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        try {
+            const fullUrl = `${window.location.origin}${filepath}`;
+            console.log('Download URL:', fullUrl); // 디버깅용
+            
+            const link = document.createElement('a');
+            link.href = fullUrl;
+            link.download = filename || 'download';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error('Download error:', error);
+            alert('파일 다운로드 중 오류가 발생했습니다.');
+        }
     };
+
+    const handleFileDelete = async (fileId) => {
+        if (!window.confirm('파일을 삭제하시겠습니까?')) return;
+        
+        try {
+            const res = await fetch(`/api/files/${fileId}`, {
+                method: 'DELETE',
+            });
+
+            if (res.ok) {
+                fetchFiles(); // 파일 목록 새로고침
+            } else {
+                throw new Error('파일 삭제 실패');
+            }
+        } catch (error) {
+            console.error('파일 삭제 오류:', error);
+            alert('파일 삭제 중 오류가 발생했습니다.');
+        }
+    };
+
+    const canModifyFiles = isEditMode || currentUser?.nickname === postAuthor;
 
     return (
         <div className="files-section">
@@ -82,22 +110,22 @@ export default function FileSection({ postId }) {
             
             {isExpanded && (
                 <>
-                    <div className="file-upload-section">
-                        <label className="file-upload-label">
-                            파일 첨부하기
-                            <input
-                                type="file"
-                                onChange={handleFilesUpload}
-                                className="hidden"
-                                multiple
-                                accept="*/*"
-                            />
-                        </label>
-                        <p className="file-info">
-                            * 파일당 최대 5MB, 여러 파일 선택 가능
-                        </p>
-                        {isUploading && <p className="upload-status">업로드 중...</p>}
-                    </div>
+                    {canModifyFiles && (
+                        <div className="file-upload-section">
+                            <label className="file-upload-label">
+                                파일 첨부하기
+                                <input
+                                    type="file"
+                                    onChange={handleFilesUpload}
+                                    className="hidden"
+                                    multiple
+                                    accept="*/*"
+                                />
+                            </label>
+                            <p className="file-info">* 파일당 최대 5MB</p>
+                            {isUploading && <p>업로드 중...</p>}
+                        </div>
+                    )}
                     
                     {files.length > 0 ? (
                         <div className="file-grid">
@@ -115,6 +143,14 @@ export default function FileSection({ postId }) {
                                     >
                                         다운로드
                                     </button>
+                                    {canModifyFiles && (
+                                        <button 
+                                            className="file-delete"
+                                            onClick={() => handleFileDelete(file._id)}
+                                        >
+                                            삭제
+                                        </button>
+                                    )}
                                 </div>
                             ))}
                         </div>
