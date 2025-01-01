@@ -8,7 +8,7 @@ import { NextResponse } from 'next/server';
 // 파일 목록 조회 (GET)
 export async function GET(request, { params }) {
     try {
-        const db = (await connectDB).db('forum');
+        const db = (await connectDB()).db('forum');
         const files = await db.collection('files')
             .find({ postId: params.id })
             .project({
@@ -57,7 +57,7 @@ export async function POST(request, { params }) {
         await writeFile(filepath, buffer);
 
         // MongoDB에 파일 정보 저장
-        const db = (await connectDB).db('forum');
+        const db = (await connectDB()).db('forum');
         const result = await db.collection('files').insertOne({
             filename: file.name,
             filepath: `/uploads/${safeFileName}`,
@@ -81,7 +81,7 @@ export async function POST(request, { params }) {
 // 파일 삭제 (DELETE)
 export async function DELETE(request, { params }) {
     try {
-        const db = (await connectDB).db('forum');
+        const db = (await connectDB()).db('forum');
         
         // ID가 ObjectId 형식인 경우 파일 ID로 처리, 아닌 경우 postId로 처리
         const query = ObjectId.isValid(params.id) 
